@@ -3,9 +3,12 @@
 #include <memory>
 #include <cmath>
 #include <cassert>
-#include <omp.h>
 #include <bitset>
 #include "Timer.hpp"
+
+#define NUM_THREADS 8
+#define USE_CRITICAL
+//#define USE_REDUCE
 
 
 template<class ... Args>
@@ -63,13 +66,22 @@ namespace BBPar {
     ) {
         if (set == 0) { /* nowhere else to go: return to 0 and call it a day */
             auto length = path_length + dist[pos][0];
+#ifdef USE_CRITICAL
 #pragma omp critical
+#endif
             if (length < best) {
                 best = length;
             }
         }
-        //#pragma omp parallel for default(none) shared(dist, pos, path_length, set) reduction(min: best) num_threads(8)
-#pragma omp parallel for default(none) schedule(dynamic) shared(dist, pos, path_length, set) shared(best) num_threads(7)
+#ifdef USE_CRITICAL
+#pragma omp parallel for default(none) schedule(dynamic) shared(dist, pos, path_length, set) shared(best) num_threads(NUM_THREADS)
+#else
+#ifdef USE_REDUCE
+#pragma omp parallel for default(none) shared(dist, pos, path_length, set) reduction(min: best) num_threads(NUM_THREADS)
+#else
+#error I dont know what to use
+#endif
+#endif
         for (std::size_t next = 0; next < dist.size(); ++next) {
             if (set & (1u << next)) { /* if next position is usable */
                 const auto extended_len = path_length + dist[pos][next];
@@ -92,7 +104,10 @@ namespace BBPar {
 };
 
 int main () {
+    std::ios_base::sync_with_stdio(false);
+    std::cin.tie(nullptr);
     freopen("../in.txt", "r", stdin);
+
     int n, m;
     std::vector<std::vector<float>> distances;
     std::cin >> n >> m;
@@ -106,14 +121,10 @@ int main () {
         std::cin >> u >> v >> w;
         distances[u][v] = distances[v][u] = w;
     }
-    for (int i = 0; i < n; ++i) {
-        for (int j = 0; j < n; ++j) {
-            std::cout << distances[i][j] << ' ';
-        }
-        std::cout << '\n';
-    }
+
+    Timer timer;
+    for (int i = 0; i < 100; ++i)
     {
-        Timer timer;
         std::cout << BBPar::solve(distances) << '\n';
     }
     return 0;
