@@ -8,8 +8,8 @@
 
 #define NUM_THREADS 8
 #define SCHEDULE_MAX_DEPTH 10
-//#define USE_CRITICAL
-#define USE_REDUCE
+#define USE_CRITICAL
+//#define USE_REDUCE
 
 
 namespace BBSeq {
@@ -95,7 +95,7 @@ namespace BBPar {
         }
 
 #if defined (USE_CRITICAL)
-#pragma omp parallel for default(none) shared(dist, pos, path_length, set) shared(best)  num_threads(NUM_THREADS) schedule(dynamic)
+#pragma omp parallel for default(none) shared(dist, pos, path_length, set, depth) shared(best)  num_threads(NUM_THREADS) schedule(dynamic)
 #elif defined (USE_REDUCE)
 #pragma omp parallel for default(none) shared(dist, pos, path_length, set, depth) num_threads(NUM_THREADS) reduction(min: best) schedule(dynamic)
 #else
