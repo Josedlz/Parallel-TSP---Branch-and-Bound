@@ -55,26 +55,19 @@ namespace BBPar {
     ) {
         if (set == 0) { /* nowhere else to go: return to 0 and call it a day */
             auto length = path_length + dist[pos][0];
-#ifdef USE_CRITICAL
 #pragma omp critical
-#endif
             if (length < best) {
                 best = length;
             }
         }
-
-#if defined (USE_CRITICAL)
-#pragma omp parallel for default(none) shared(dist, pos, path_length, set) shared(best)  num_threads(NUM_THREADS) schedule(dynamic)
-#elif defined (USE_REDUCE)
-#pragma omp parallel for default(none) shared(dist, pos, path_length, set) num_threads(NUM_THREADS) reduction(min: best) schedule(dynamic)
-#else
-#error No strategy used
-#endif
         for (std::size_t next = 0; next < dist.size(); ++next) {
             if (set & (1u << next)) { /* if next position is usable */
-                const auto extended_len = path_length + dist[pos][next];
-                if (extended_len < best) { /* extend the path */
-                    summon_solve_par(dist, next, set & ~(1u << next), extended_len, best);
+#pragma omp task default(none) shared(dist, next, set, path_length, pos, best)
+                {
+                    const auto extended_len = path_length + dist[pos][next];
+                    if (extended_len < best) { /* extend the path */
+                        summon_solve_par(dist, next, set & ~(1u << next), extended_len, best);
+                    }
                 }
             }
         }
@@ -86,7 +79,11 @@ namespace BBPar {
 
         const auto mask = (1 << distances.size()) - 1;
         float best /*out*/ = INFINITY;
-        summon_solve_par(distances, 0, mask & ~1, 0, best);
+#pragma omp parallel default(none) shared(distances, mask, best) num_threads(8)
+        {
+#pragma omp single
+            summon_solve_par(distances, 0, mask & ~1, 0, best);
+        }
         return best;
     }
 };
@@ -95,6 +92,7 @@ int main () {
     std::ios_base::sync_with_stdio(false);
     std::cin.tie(nullptr);
     freopen("../in.txt", "r", stdin);
+    freopen("nul", "w", stderr);
 
     int n, m;
     std::vector<std::vector<float>> distances;
@@ -110,11 +108,12 @@ int main () {
         std::cin >> u >> v >> w;
         distances[u][v] = distances[v][u] = w;
     }
-
-    Timer timer;
-    for (int i = 0; i < 1000; ++i)
     {
+        Timer timer;
         std::cout << BBPar::solve(distances) << '\n';
+        for (int i = 1; i < 1000; ++i) {
+            std::cerr << BBPar::solve(distances) << '\n';
+        }
     }
     return 0;
 }
