@@ -51,10 +51,8 @@ namespace BBPar {
     ) {
         if (set == 0) { /* nowhere else to go: return to 0 and call it a day */
             auto length = path_length + dist[pos][0];
-            float cur_best;
-#pragma omp atomic read
-            cur_best = best;
-            if (length <= cur_best) { return; }
+            /* best case, a non-blocking check is executed */
+            if (length >= best) { return; }
 #pragma omp critical
             best = length < best ? length : best;
             return;
