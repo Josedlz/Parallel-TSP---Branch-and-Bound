@@ -23,6 +23,7 @@ namespace BBSeq {
             if (length < best) {
                 best = length;
             }
+            return;
         }
         for (std::size_t next = 0; next < dist.size(); ++next) {
             if (set & (1u << next)) { /* if next position is usable */
@@ -50,7 +51,7 @@ namespace BBPar {
 
     void
     summon_solve_par (
-        const Matrix& dist, uint8_t pos, uint16_t set, float path_length, /*in*/
+        const Matrix& dist, uint_fast8_t pos, uint_fast16_t set, float path_length, /*in*/
         float& best /*out*/
     ) {
         if (set == 0) { /* nowhere else to go: return to 0 and call it a day */
@@ -59,16 +60,30 @@ namespace BBPar {
             if (length < best) {
                 best = length;
             }
+            return;
         }
-        for (std::size_t next = 0; next < dist.size(); ++next) {
+
+        uint_fast8_t next_positions[16];
+        uint_fast8_t next_pos_size = 0;
+
+        for (uint_fast8_t next = 0; next < (uint_fast8_t) dist.size(); ++next) {
             if (set & (1u << next)) { /* if next position is usable */
-#pragma omp task default(none) shared(dist, next, set, path_length, pos, best)
-                {
-                    const auto extended_len = path_length + dist[pos][next];
-                    if (extended_len < best) { /* extend the path */
-                        summon_solve_par(dist, next, set & ~(1u << next), extended_len, best);
-                    }
+                const auto extended_len = path_length + dist[pos][next];
+                if (extended_len < best) { /* extend the path */
+                    next_positions[next_pos_size++] = next;
                 }
+            }
+        }
+
+        uint_fast8_t it = 0;
+        for (; it < next_pos_size; ++it) {
+            auto next = next_positions[it];
+            if (it + 1 < next_pos_size) {
+#pragma omp task default(none) shared(dist, next, set, path_length, pos, best)
+                summon_solve_par(dist, next, set & ~(1u << next), path_length + dist[pos][next], best);
+            }
+            else {
+                summon_solve_par(dist, next, set & ~(1u << next), path_length + dist[pos][next], best);
             }
         }
     }
@@ -107,6 +122,13 @@ int main () {
         float w;
         std::cin >> u >> v >> w;
         distances[u][v] = distances[v][u] = w;
+    }
+    {
+        Timer timer;
+        std::cout << BBSeq::solve(distances) << '\n';
+        for (int i = 1; i < 1000; ++i) {
+            std::cerr << BBSeq::solve(distances) << '\n';
+        }
     }
     {
         Timer timer;
