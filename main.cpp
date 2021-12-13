@@ -5,11 +5,6 @@
 #include <bitset>
 #include "Timer.hpp"
 
-#define NUM_THREADS 4
-#define USE_CRITICAL
-//#define USE_REDUCE
-
-
 namespace BBSeq {
     using Matrix = std::vector<std::vector<float>>;
 
@@ -57,12 +52,11 @@ namespace BBPar {
         if (set == 0) { /* nowhere else to go: return to 0 and call it a day */
             auto length = path_length + dist[pos][0];
 #pragma omp critical
-            if (length < best) {
-                best = length;
-            }
+            best = length < best ? length : best;
             return;
         }
 
+        /* basically the same as a vector to save which ones do we need to task out */
         uint_fast8_t next_positions[16];
         uint_fast8_t next_pos_size = 0;
 
@@ -75,27 +69,32 @@ namespace BBPar {
             }
         }
 
+        if (!next_pos_size) { return; }
+
+        /* summon tasks for everyone... except the last one... */
         uint_fast8_t it = 0;
-        for (; it + 1 < next_pos_size; ++it) {
+        for (; it < next_pos_size - 1; ++it) {
             auto next = next_positions[it];
             auto extended_len = path_length + dist[pos][next];
 #pragma omp task default(none) shared(dist, next, set, best, extended_len)
             summon_solve_par(dist, next, set & ~(1u << next), extended_len, best);
         }
-        if (next_pos_size) {
-            auto next = next_positions[it];
-            auto extended_len = path_length + dist[pos][next];
-            summon_solve_par(dist, next, set & ~(1u << next), extended_len, best);
-        }
+
+        /* because we want to keep it running without creating a new thread */
+        auto next = next_positions[it];
+        auto extended_len = path_length + dist[pos][next];
+        summon_solve_par(dist, next, set & ~(1u << next), extended_len, best);
     }
 
-    float solve (Matrix& distances) {
+    float solve (const Matrix& distances) {
         assert(!distances.empty());
         assert(distances.size() == distances[0].size());
 
         const auto mask = (1 << distances.size()) - 1;
         float best /*out*/ = INFINITY;
-#pragma omp parallel default(none) shared(distances, mask, best) num_threads(8)
+
+        // create the caller task
+#pragma omp parallel default(none) shared(distances, mask, best) num_threads(4)
         {
 #pragma omp single
             summon_solve_par(distances, 0, mask & ~1, 0, best);
