@@ -51,6 +51,10 @@ namespace BBPar {
     ) {
         if (set == 0) { /* nowhere else to go: return to 0 and call it a day */
             auto length = path_length + dist[pos][0];
+            float cur_best;
+#pragma omp atomic read
+            cur_best = best;
+            if (length <= cur_best) { return; }
 #pragma omp critical
             best = length < best ? length : best;
             return;
@@ -93,8 +97,8 @@ namespace BBPar {
         const auto mask = (1 << distances.size()) - 1;
         float best /*out*/ = INFINITY;
 
-        // create the caller task
-#pragma omp parallel default(none) shared(distances, mask, best) num_threads(4)
+        /* create the caller task */
+#pragma omp parallel default(none) shared(distances, mask, best) num_threads(3)
         {
 #pragma omp single
             summon_solve_par(distances, 0, mask & ~1, 0, best);
