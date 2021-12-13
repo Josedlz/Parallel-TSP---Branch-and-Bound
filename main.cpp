@@ -76,15 +76,16 @@ namespace BBPar {
         }
 
         uint_fast8_t it = 0;
-        for (; it < next_pos_size; ++it) {
+        for (; it + 1 < next_pos_size; ++it) {
             auto next = next_positions[it];
-            if (it + 1 < next_pos_size) {
-#pragma omp task default(none) shared(dist, next, set, path_length, pos, best)
-                summon_solve_par(dist, next, set & ~(1u << next), path_length + dist[pos][next], best);
-            }
-            else {
-                summon_solve_par(dist, next, set & ~(1u << next), path_length + dist[pos][next], best);
-            }
+            auto extended_len = path_length + dist[pos][next];
+#pragma omp task default(none) shared(dist, next, set, best, extended_len)
+            summon_solve_par(dist, next, set & ~(1u << next), extended_len, best);
+        }
+        if (next_pos_size) {
+            auto next = next_positions[it];
+            auto extended_len = path_length + dist[pos][next];
+            summon_solve_par(dist, next, set & ~(1u << next), extended_len, best);
         }
     }
 
