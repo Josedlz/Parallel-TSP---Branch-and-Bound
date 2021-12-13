@@ -7,7 +7,7 @@
 #include "Timer.hpp"
 
 #define NUM_THREADS 8
-#define SCHEDULE_MAX_DEPTH 4
+#define SCHEDULE_MAX_DEPTH 10
 //#define USE_CRITICAL
 #define USE_REDUCE
 
@@ -83,6 +83,17 @@ namespace BBPar {
         if (depth >= SCHEDULE_MAX_DEPTH) {
             summon_solve(dist, pos, set, path_length, best);
         }
+
+        if (set == 0) { /* nowhere else to go: return to 0 and call it a day */
+            auto length = path_length + dist[pos][0];
+#ifdef USE_CRITICAL
+#pragma omp critical
+#endif
+            if (length < best) {
+                best = length;
+            }
+        }
+
 #if defined (USE_CRITICAL)
 #pragma omp parallel for default(none) shared(dist, pos, path_length, set) shared(best)  num_threads(NUM_THREADS) schedule(dynamic)
 #elif defined (USE_REDUCE)
