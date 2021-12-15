@@ -84,16 +84,12 @@ namespace BBPar {
         for (uint_fast8_t next = 0; next < n; ++next) {
             if (set & (1 << next)) {
                 if (path_length + dist[pos][next] < best) {
-                    tasks.push_back(next);
+                    #pragma omp task default(none) shared(dist, best, next) shared(tasks, set, path_length, pos, n)
+                    summon_solve_par(dist, n, next, set & ~(1 << next), path_length + dist[pos][next], best);
                 }
             }
         }
 
-
-        for (uint8_t next : tasks) {
-#pragma omp task default(none) shared(dist, best, next) shared(tasks, set, path_length, pos, n)
-            summon_solve_par(dist, n, next, set & ~(1 << next), path_length + dist[pos][next], best);
-        }
         //#pragma omp taskwait
     }
 
