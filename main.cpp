@@ -1,6 +1,4 @@
 #include "main.hpp"
-//#include "tsp.hpp"
-//#define N 100
 #include <random>
 
 const int n = 10;
