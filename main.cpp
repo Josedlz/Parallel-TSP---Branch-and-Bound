@@ -48,28 +48,14 @@ int main () {
         std::cout << '\n';
     }
 
-    std::cout << "Regular\n";
-    {
-        Timer timer;
-        std::cerr << BBSeq::solve(distances, n);
-    }
-
     std::cout << "Recursive\n";
-    for (int nt = 1; nt < 16; ++nt) {
+    for (int nt = 1; nt <= 16; nt *= 2) {
+        std::cout << nt << ": ";
         Timer timer;
-        std::cerr << BBPar::solve(distances, n, nt) << '\n';
-//        for (int i = 1; i < 1000; ++i) {
-//            std::cerr << BBPar::solve(distances, n, nt) << '\n';
-//        }
+        for (int i = 0; i < 100; ++i) {
+            std::cerr << BBPar::solve(distances, n, nt) << '\n';
+        }
     }
 
-    std::cout << "Non recursive\n";
-    for (int nt = 1; nt < 16; ++nt) {
-        Timer timer;
-        std::cerr << BBPar::solve_non_rec(distances, n, nt) << '\n';
-//        for (int i = 1; i < 1000; ++i) {
-//            std::cerr << BBPar::solve_non_rec(distances, n, nt) << '\n';
-//        }
-    }
     return 0;
 }

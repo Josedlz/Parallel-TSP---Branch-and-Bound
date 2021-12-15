@@ -69,7 +69,7 @@ namespace BBSeq {
 namespace BBPar {
     void summon_solve_par (
         const float dist[N][N], const int n,
-        const uint_fast8_t pos, const Set set, const float path_length, /*in*/
+        const uint_fast8_t pos, const uint16_t set, const float path_length, /*in*/
         float& best                                                               /*out*/
         ) {
         if (set == 0) { /* nowhere else to go: return to 0 and call it a day */
@@ -82,25 +82,23 @@ namespace BBPar {
         /* basically the same as a vector to save which ones do we need to task out */
         std::vector<uint_fast8_t> tasks;
         for (uint_fast8_t next = 0; next < n; ++next) {
-            if (set[next]) {
+            if (set & (1 << next)) {
                 if (path_length + dist[pos][next] < best) {
                     tasks.push_back(next);
                 }
             }
         }
 
-        uint8_t active = n - set.count();
-        auto LIMIT = [n] (int level) { return (level - 1) * n > omp_get_num_threads(); };
 
-#pragma omp taskloop default(none) shared(dist, best) shared(tasks, set, path_length, pos, n) final(LIMIT(active))
         for (uint8_t next : tasks) {
-            summon_solve_par(dist, n, next, with(set, next, false), path_length + dist[pos][next], best);
+#pragma omp task default(none) shared(dist, best, next) shared(tasks, set, path_length, pos, n)
+            summon_solve_par(dist, n, next, set & ~(1 << next), path_length + dist[pos][next], best);
         }
         //#pragma omp taskwait
     }
 
     float solve (const float distances[N][N], const int n, int numthreads) {
-        const auto mask = with(create_mask(n), 0, false);
+        const auto mask = (1 << n) - 2;
         float best /*out*/ = INFINITY;
 
 #pragma omp parallel default(none) shared(distances, best) num_threads(numthreads) shared(mask, n)
