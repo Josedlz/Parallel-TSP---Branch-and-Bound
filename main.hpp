@@ -84,13 +84,11 @@ namespace BBPar {
         for (uint_fast8_t next = 0; next < n; ++next) {
             if (set & (1 << next)) {
                 if (path_length + dist[pos][next] < best) {
-                    #pragma omp task default(none) shared(dist, best, next) shared(tasks, set, path_length, pos, n)
+#pragma omp task default(none) shared(dist, best, next) shared(tasks, set, path_length, pos, n)
                     summon_solve_par(dist, n, next, set & ~(1 << next), path_length + dist[pos][next], best);
                 }
             }
         }
-
-        //#pragma omp taskwait
     }
 
     float solve (const float distances[N][N], const int n, int numthreads) {
@@ -100,6 +98,7 @@ namespace BBPar {
 #pragma omp parallel default(none) shared(distances, best) num_threads(numthreads) shared(mask, n)
 #pragma omp single
         { summon_solve_par(distances, n, 0, mask, 0, best); }
+#pragma omp taskwait
 
         return best;
     }
