@@ -144,7 +144,7 @@ namespace BBPar {
         Set set;
         float path_length;
 
-#pragma omp parallel default(none) shared(stack, distances, best, std::cout) num_threads(numthreads) private(pos, set, path_length)
+#pragma omp parallel default(none) shared(stack, distances, best) num_threads(numthreads) private(pos, set, path_length)
         while (true) {
             auto[empty, value] = pop_if_not_empty(stack);
             if (empty) {
