@@ -10,7 +10,6 @@ if (OPENMP_FOUND)
     set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 endif()
 
-add_executable(Parallel_TSP___Branch_and_Bound
-        main.cpp)
+add_executable(Parallel_TSP___Branch_and_Bound main.cpp)
 
-
+target_compile_definitions(Parallel_TSP___Branch_and_Bound PRIVATE -DTHREADS=4)
