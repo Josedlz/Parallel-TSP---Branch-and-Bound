@@ -1,0 +1,8 @@
+//
+// Created by Esteban on 12/15/2021.
+//
+
+#ifndef PARALLEL_TSP___BRANCH_AND_BOUND_TSP_HPP
+#define PARALLEL_TSP___BRANCH_AND_BOUND_TSP_HPP
+
+#endif //PARALLEL_TSP___BRANCH_AND_BOUND_TSP_HPP
